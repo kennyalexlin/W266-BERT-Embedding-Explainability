@@ -19,39 +19,33 @@ class TweetIterator:
             raise StopIteration
         return line.strip()
     
-def get_token_embedding(tokenizer, embedding_layer, token):
-    # convenience function to get the embedding of a particular token
-    token_id = tokenizer.convert_tokens_to_ids(token)
-    return embedding_layer(tf.constant([[token_id]]))[0][0]
+def get_token_embedding(token, model, tokenizer):
+    return model(tokenizer(token, return_tensors="tf"))[0][0][1]
 
 def get_k_nearest_neighbors(
     token, 
+    model,
     embeddings, 
     tokenizer, 
-    embedding_layer, 
     k=10):
     """ get the top k nearest neighbors for a given token
     Args
         token (str): the token to retrieve neighbors for (e.g. "dog")
-        token_embedding (tf.Tensor): tensor representing the embedding for the token
+        model (TFBertForMaskedLM): the BERT model
         embeddings (List[tf.Tensor]): list of tensors representing the embeddings for every word in the vocab
         tokenizer (Tokenizer): associated tokenizer
-        embedding_layer (TF Embedding Layer): associated embedding layer
     Returns
         tuple of (top k neighbors, cosine distances associated w/ top k neighbors)
     
     """
     
     vocab_tokens = list(tokenizer.get_vocab().keys())
-    token_embedding = get_token_embedding(
-        tokenizer,
-        embedding_layer,
-        token
-    )
+    token_embedding = model(tokenizer(token, return_tensors="tf"))[0][0][1]
     
     # get cosine distance of token vs all other tokens
     dists = []
     ignore = tokenizer.all_special_tokens + [token]
+
     for idx, embedding in enumerate(embeddings):
         if vocab_tokens[idx] in ignore:
             dists.append(10) # don't consider when getting nearest neighbors
